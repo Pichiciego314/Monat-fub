@@ -17,20 +17,15 @@ from std_msgs.msg import String
 
 
 
-class parking:
+class neural:
     def __init__(self):
         self.net_image = []
         self.camara_sub = rospy.Subscriber("/sensors/camera/color/image_raw", Image, self.get_image)
         self.img_pub = rospy.Publisher("/imagen/nuevo_topico", Image, queue_size=10)
         self.bridge = CvBridge()
         self.vel_pub = rospy.Publisher("/control/command/normalized_wanted_speed", NormalizedSpeedCommand, queue_size=10)
- #       self.network = models.Sequential()
-  #      self.network.add(layers.Dense(512, activation='relu', input_shape= (28*28,)))
-   #     self.network.add(layers.Dense(6, activation='softmax'))
-    #    self.network.compile(optimizer='rmsprop',
-     #           loss='categorical_crossentropy',
-      #          metrics=['accuracy'])
-        #estructura de la red convoluional
+      
+        #convolutional neural network structure
         self.classifier = models.Sequential()
         self.classifier.add(Conv2D(32, (3, 3), input_shape=(28, 28, 1)))
         BatchNormalization(axis=-1)  # Axis -1 is always the features axis
@@ -71,21 +66,16 @@ class parking:
     def simple_parking(self):
         if self.net_image == []:
             return
-
-   #     rospy.sleep(0.5)
-
+        #here are the uploadings of the weights
         self.classifier.load_weights('/home/alvarado/catkin_emiliano/src/assigment_publisher_subscriber/src/net4.h5')
-
+        #here the image is being converted into black and white 
         gray=cv2.cvtColor(self.net_image, cv2.COLOR_BGR2GRAY)
-        #bi_gray_max = 255
-        #bi_gray_min = 70
-        #ret,thresh1=cv2.threshold(gray, bi_gray_min, bi_gray_max, cv2.THRESH_BINARY)
         ret2,thresh1 = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
         test_images = thresh1
 	print("Tamanio imagen: {}".format(test_images.shape))
 	test_images = cv2.resize(test_images, (56,56), interpolation = cv2.INTER_AREA) 
-        test_images = test_images[0:28, 28:56]
+        test_images = test_images[0:28, 28:56] #here image is being resizedinto something the computer can reads
 
         try:
             ros_img = self.bridge.cv2_to_imgmsg(test_images)
@@ -93,7 +83,6 @@ class parking:
         except CvBridgeError as e:
             print(e)
 
-	#test_images = test_images[0:28, 28:56]
         
 ############
 	imagenes_NN = test_images.reshape((1, 28, 28, 1))
@@ -104,7 +93,7 @@ class parking:
  ###########
         print("Resultado: {}".format(resultado))
         #return
-
+        #here are set up the conditions for the numbers the net sees.
         velocidad = NormalizedSpeedCommand()
         
         if resultado == 5:
@@ -124,8 +113,8 @@ if __name__ == '__main__':
     try:
         rospy.init_node('parking')
 
-        dummy = parking() # Crea un objeto para ejecutar parking
-        rate = rospy.Rate(10) # Que tan rapido quiero que se ejecute el programa
+        dummy = parking()#creates an obect to execute neural
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             dummy.simple_parking()
             rate.sleep()
